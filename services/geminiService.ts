@@ -2,10 +2,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ExtractedDeliveryData } from '../types';
 
-const API_KEY = process.env.GEMINI_API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
 if (!API_KEY) {
-  console.warn("GEMINI_API_KEY is not set in environment variables.");
+  console.warn("GEMINI_API_KEY or VITE_GEMINI_API_KEY is not set in environment variables.");
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY || '' });

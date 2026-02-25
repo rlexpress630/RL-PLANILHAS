@@ -10,6 +10,18 @@
   </head>
   <body class="bg-slate-50 text-gray-800">
     <div id="root"></div>
+    
+    <!-- Balão de Status Netlify -->
+    <div class="fixed bottom-4 right-4 z-50 animate-bounce pointer-events-none sm:pointer-events-auto">
+      <div class="bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg text-sm font-bold flex items-center gap-2 border-2 border-white">
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+        </span>
+        Netlify Ready 🚀
+      </div>
+    </div>
+
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
