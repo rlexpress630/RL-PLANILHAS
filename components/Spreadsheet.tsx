@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DeliveryData } from '../types';
 import { downloadCSV, downloadPDF, downloadXLSX } from '../utils/fileUtils';
 import { formatCurrency } from '../utils/formatUtils';
@@ -36,6 +36,28 @@ export const Spreadsheet: React.FC<SpreadsheetProps> = ({ title, data, onDeleteR
   }, [title]);
 
   const totalValue = data.reduce((sum, row) => sum + (parseFloat(row.total.replace(',', '.')) || 0), 0);
+
+  const [visibleCount, setVisibleCount] = useState(20);
+  const observerTarget = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && visibleCount < data.length) {
+          setVisibleCount(prev => prev + 20);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [visibleCount, data.length]);
+
+  const visibleData = data.slice(0, visibleCount);
 
   const handleDownloadCSV = () => {
     downloadCSV(data, title);
@@ -172,6 +194,19 @@ export const Spreadsheet: React.FC<SpreadsheetProps> = ({ title, data, onDeleteR
     }
   };
 
+  const handleShareRowWhatsApp = (row: DeliveryData) => {
+    let text = `📦 *Detalhes da Entrega*\n\n`;
+    text += `📅 *Data:* ${row.date}\n`;
+    text += `📍 *Coleta:* ${row.collection}\n`;
+    text += `🏁 *Destino:* ${row.destination}\n`;
+    text += `💰 *Valor:* ${formatCurrency(row.total)}\n`;
+    if (row.observation) text += `📝 *Obs:* ${row.observation}\n`;
+    
+    const encodedText = encodeURIComponent(text);
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedText}`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const renderEditableCell = (row: DeliveryData, field: EditableField, displayFormatter?: (value: any) => string) => {
     const isEditing = editingCell?.rowId === row.id && editingCell?.field === field;
     const displayValue = displayFormatter ? displayFormatter(row[field]) : row[field];
@@ -282,7 +317,7 @@ export const Spreadsheet: React.FC<SpreadsheetProps> = ({ title, data, onDeleteR
             {/* Mobile Card View */}
             <div className="md:hidden">
               <div className="space-y-3">
-                {data.map((row) => {
+                {visibleData.map((row) => {
                   const isExpanded = expandedRowId === row.id;
                   const isEditingThisRow = editingRowId === row.id;
                   
@@ -342,6 +377,9 @@ export const Spreadsheet: React.FC<SpreadsheetProps> = ({ title, data, onDeleteR
                                 <button onClick={(e) => { e.stopPropagation(); handleStartMobileEdit(row); }} className="p-1" aria-label={`Editar item ${row.id}`}>
                                   <PencilIcon className="w-5 h-5 text-blue-500 hover:text-blue-700" />
                                 </button>
+                                <button onClick={(e) => { e.stopPropagation(); handleShareRowWhatsApp(row); }} className="p-1" aria-label={`Compartilhar item ${row.id}`}>
+                                  <WhatsappIcon className="w-5 h-5 text-teal-500 hover:text-teal-700" />
+                                </button>
                                 <button onClick={(e) => { e.stopPropagation(); onDeleteRow(row.id); }} className="p-1" aria-label={`Excluir item ${row.id}`}>
                                   <TrashIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
                                 </button>
@@ -378,7 +416,7 @@ export const Spreadsheet: React.FC<SpreadsheetProps> = ({ title, data, onDeleteR
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((row) => (
+                  {visibleData.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{row.date}</td>
                       <td className="px-6 py-4 whitespace-normal text-sm text-gray-700">{renderEditableCell(row, 'collection')}</td>
@@ -386,13 +424,22 @@ export const Spreadsheet: React.FC<SpreadsheetProps> = ({ title, data, onDeleteR
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">{renderEditableCell(row, 'total', formatCurrency)}</td>
                       <td className="px-6 py-4 whitespace-normal text-sm text-gray-500">{renderEditableCell(row, 'observation')}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                        <button 
-                          onClick={() => onDeleteRow(row.id)} 
-                          className="text-red-500 hover:text-red-700 transition-colors p-1"
-                          aria-label={`Excluir item ${row.id}`}
-                        >
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleShareRowWhatsApp(row)} 
+                            className="text-teal-500 hover:text-teal-700 transition-colors p-1"
+                            title="Compartilhar no WhatsApp"
+                          >
+                            <WhatsappIcon className="w-5 h-5" />
+                          </button>
+                          <button 
+                            onClick={() => onDeleteRow(row.id)} 
+                            className="text-red-500 hover:text-red-700 transition-colors p-1"
+                            aria-label={`Excluir item ${row.id}`}
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -408,6 +455,7 @@ export const Spreadsheet: React.FC<SpreadsheetProps> = ({ title, data, onDeleteR
                 </tfoot>
               </table>
             </div>
+            <div ref={observerTarget} className="h-4 w-full"></div>
           </>
         ) : (
           <div className="text-center py-16 px-6 bg-slate-50 rounded-lg">

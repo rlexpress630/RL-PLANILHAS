@@ -1,16 +1,20 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { DeliveryData, CostData } from './types';
 import { Header } from './components/Header';
-import { ImageUploader } from './components/ImageUploader';
-import { ManualInputBar } from './components/ManualInputBar';
-import { Spreadsheet } from './components/Spreadsheet';
-import { CostsInputBar } from './components/CostsInputBar';
-import { CostsSpreadsheet } from './components/CostsSpreadsheet';
-import { SummaryView } from './components/SummaryView';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { motion, AnimatePresence } from 'framer-motion';
 import { processImageForSpreadsheet } from './services/geminiService';
 import { fileToBase64 } from './utils/fileUtils';
 import { formatDate } from './utils/formatUtils';
+
+// Lazy loading components for performance
+const ImageUploader = lazy(() => import('./components/ImageUploader').then(m => ({ default: m.ImageUploader })));
+const ManualInputBar = lazy(() => import('./components/ManualInputBar').then(m => ({ default: m.ManualInputBar })));
+const Spreadsheet = lazy(() => import('./components/Spreadsheet').then(m => ({ default: m.Spreadsheet })));
+const CostsInputBar = lazy(() => import('./components/CostsInputBar').then(m => ({ default: m.CostsInputBar })));
+const CostsSpreadsheet = lazy(() => import('./components/CostsSpreadsheet').then(m => ({ default: m.CostsSpreadsheet })));
+const SummaryView = lazy(() => import('./components/SummaryView').then(m => ({ default: m.SummaryView })));
 
 const SPREADSHEET_DATA_KEY = 'spreadsheetDeliveryData';
 const SPREADSHEET_COSTS_KEY = 'spreadsheetCostsData';
@@ -143,7 +147,13 @@ const App: React.FC = () => {
     switch (activeView) {
       case 'deliveries':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <motion.div 
+            key="deliveries"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+          >
             <div className="lg:col-span-4 space-y-8">
               <ManualInputBar onAddRow={handleAddRow} />
               <ImageUploader onProcessImages={handleProcessImages} isLoading={isLoading} />
@@ -159,11 +169,17 @@ const App: React.FC = () => {
                 showSaveConfirmation={showSaveConfirmation}
               />
             </div>
-          </div>
+          </motion.div>
         );
       case 'costs':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <motion.div 
+            key="costs"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+          >
             <div className="lg:col-span-4 space-y-8">
               <CostsInputBar onAddCost={handleAddCost} />
             </div>
@@ -175,15 +191,24 @@ const App: React.FC = () => {
                 onClearAll={handleClearAllCosts}
               />
             </div>
-          </div>
+          </motion.div>
         );
       case 'summary':
-        return <SummaryView 
-                  deliveriesTotal={deliveriesTotal} 
-                  costsTotal={costsTotal}
-                  deliveriesData={spreadsheetData}
-                  costsData={costsData} 
-                />;
+        return (
+          <motion.div
+            key="summary"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+          >
+            <SummaryView 
+              deliveriesTotal={deliveriesTotal} 
+              costsTotal={costsTotal}
+              deliveriesData={spreadsheetData}
+              costsData={costsData} 
+            />
+          </motion.div>
+        );
       default:
         return null;
     }
@@ -192,10 +217,10 @@ const App: React.FC = () => {
   const TabButton: React.FC<{ view: View; label: string }> = ({ view, label }) => (
     <button
       onClick={() => setActiveView(view)}
-      className={`px-4 py-2 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200 ${
+      className={`px-6 py-3 text-sm sm:text-base font-bold rounded-xl transition-all duration-200 ${
         activeView === view
-          ? 'bg-blue-600 text-white'
-          : 'text-gray-600 hover:bg-blue-100 hover:text-blue-700'
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+          : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
       }`}
     >
       {label}
@@ -203,28 +228,47 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-800 font-sans">
-      <Header />
-      <main className="container mx-auto p-4 md:p-8">
-        <div className="mb-6 bg-white p-2 rounded-lg shadow-sm border border-gray-200 flex justify-center sm:justify-start gap-2">
-          <TabButton view="deliveries" label="Entregas" />
-          <TabButton view="costs" label="Custos" />
-          <TabButton view="summary" label="Resumo" />
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 relative" role="alert">
-            <strong className="font-bold">Erro: </strong>
-            <span className="block sm:inline">{error}</span>
-            <button onClick={() => setError(null)} className="absolute top-0 bottom-0 right-0 px-4 py-3" aria-label="Fechar">
-              <span className="text-xl">&times;</span>
-            </button>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-slate-50 text-gray-800 font-sans">
+        <Header />
+        <main className="container mx-auto p-4 md:p-8">
+          <div className="mb-8 bg-white p-2 rounded-2xl shadow-sm border border-gray-200 flex flex-wrap justify-center sm:justify-start gap-2">
+            <TabButton view="deliveries" label="Entregas" />
+            <TabButton view="costs" label="Custos" />
+            <TabButton view="summary" label="Resumo" />
           </div>
-        )}
 
-        {renderView()}
-      </main>
-    </div>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl mb-8 flex justify-between items-center" 
+              role="alert"
+            >
+              <div>
+                <strong className="font-bold">Erro: </strong>
+                <span className="block sm:inline">{error}</span>
+              </div>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </motion.div>
+          )}
+
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          }>
+            <AnimatePresence mode="wait">
+              {renderView()}
+            </AnimatePresence>
+          </Suspense>
+        </main>
+      </div>
+    </ErrorBoundary>
   );
 };
 
