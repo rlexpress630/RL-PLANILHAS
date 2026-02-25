@@ -43,29 +43,29 @@ export const SummaryView: React.FC<SummaryViewProps> = ({ deliveriesTotal, costs
 
   const deliveriesByDestination = useMemo(() => {
     // FIX: Explicitly typing the accumulator `acc` as `Record<string, number>` ensures it's treated as a dictionary, resolving the arithmetic operation error.
-    const grouped = deliveriesData.reduce((acc: Record<string, number>, delivery) => {
+    const grouped: Record<string, number> = {};
+    deliveriesData.forEach(delivery => {
       const key = delivery.destination.trim() || 'Não especificado';
       const value = parseFloat(delivery.total.replace(',', '.')) || 0;
-      acc[key] = (acc[key] || 0) + value;
-      return acc;
-    }, {});
+      grouped[key] = (grouped[key] || 0) + value;
+    });
 
     return Object.entries(grouped)
-      .map(([label, total]) => ({ label, total }))
+      .map(([label, total]): BreakdownItem => ({ label, total }))
       .sort((a, b) => b.total - a.total);
   }, [deliveriesData]);
 
   const costsByCategory = useMemo(() => {
     // FIX: Explicitly typing the accumulator `acc` as `Record<string, number>` ensures it's treated as a dictionary, resolving the arithmetic operation error.
-    const grouped = costsData.reduce((acc: Record<string, number>, cost) => {
+    const grouped: Record<string, number> = {};
+    costsData.forEach(cost => {
       const key = cost.description.trim() || 'Não especificado';
       const value = parseFloat(cost.total.replace(',', '.')) || 0;
-      acc[key] = (acc[key] || 0) + value;
-      return acc;
-    }, {});
+      grouped[key] = (grouped[key] || 0) + value;
+    });
       
     return Object.entries(grouped)
-      .map(([label, total]) => ({ label, total }))
+      .map(([label, total]): BreakdownItem => ({ label, total }))
       .sort((a, b) => b.total - a.total);
   }, [costsData]);
 

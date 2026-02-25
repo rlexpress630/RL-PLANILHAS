@@ -2,15 +2,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ExtractedDeliveryData } from '../types';
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = process.env.GEMINI_API_KEY;
 
 if (!API_KEY) {
-  // This is a fallback for development and will show an alert.
-  // In a real production environment, the key should be securely managed.
-  console.warn("API_KEY is not set in environment variables.");
+  console.warn("GEMINI_API_KEY is not set in environment variables.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+const ai = new GoogleGenAI({ apiKey: API_KEY || '' });
 
 // Fix: Updated model to a recommended one for multimodal tasks.
 const model = 'gemini-3-flash-preview';

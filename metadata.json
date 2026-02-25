@@ -1,5 +1,5 @@
 {
-  "name": "planilha Inteligente de Entregas",
+  "name": "Remix: planilha Inteligente de Entregas",
   "description": "Um aplicativo para criar planilhas de entrega extraindo dados de imagens com IA. Faça upload de uma imagem com os detalhes da entrega e o aplicativo preencherá a planilha para você.",
   "requestFramePermissions": [
     "camera"
